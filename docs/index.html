@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LiftLog — Workout smarter and harder</title>
+<meta name="description" content="A personal trainer agent that lives in your chat. It builds your program, tracks your progress, and coaches you between sets. You just show up and lift.">
+<meta name="theme-color" content="#0a0a0a" id="theme-color-meta">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script>
+(function(){
+  var t=localStorage.getItem('liftlog-theme');
+  if(!t)t='dark';
+  var meta=document.getElementById('theme-color-meta');
+  if(meta)meta.content=t==='dark'?'#0a0a0a':'#faf8f5';
+  document.documentElement.setAttribute('data-theme',t);
+})();
+</script>
+<style>
+:root {
+  --bg:#faf8f5; --bg-card:#fff; --bg-elevated:#f5f2ee;
+  --text:#1a1a1a; --text-secondary:#555; --text-tertiary:#999;
+  --border:#e8e4df; --border-strong:#d4cfc8;
+  --accent:#0a7d3c; --accent-hover:#086a33; --accent-soft:#e8f5ef;
+  --code-bg:#f5f2ee; --code-border:#e0dcd6;
+}
+[data-theme="dark"] {
+  --bg:#0a0a0a; --bg-card:#161616; --bg-elevated:#1c1c1c;
+  --text:#f0ece4; --text-secondary:#a8a39a; --text-tertiary:#6a655e;
+  --border:#262626; --border-strong:#363636;
+  --accent:#22c55e; --accent-hover:#16a34a; --accent-soft:rgba(34,197,94,.12);
+  --code-bg:#111; --code-border:#262626;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;transition:background .2s,color .2s}
+.serif{font-family:'Instrument Serif',Georgia,serif}
+
+/* Nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+nav .inner{max-width:760px;margin:0 auto;padding:14px 24px;display:flex;justify-content:space-between;align-items:center}
+.logo{text-decoration:none;color:var(--text);font-weight:800;font-size:1.1em;letter-spacing:-.02em}
+nav .links{display:flex;gap:24px;align-items:center}
+nav .links a{color:var(--text);text-decoration:none;font-size:.92em;font-weight:500;transition:color .15s;opacity:.7}
+nav .links a:hover{color:var(--text);opacity:1}
+.icon-btn{background:none;border:none;color:var(--text);cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;transition:all .15s;opacity:.6}
+.icon-btn:hover{background:var(--bg-elevated);color:var(--text);opacity:1}
+
+/* Container */
+.container{max-width:760px;margin:0 auto;padding:0 24px}
+
+/* Hero */
+.hero{text-align:center;padding:130px 24px 60px;max-width:640px;margin:0 auto}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;background:var(--bg-elevated);color:var(--text-secondary);border-radius:100px;font-size:.82em;font-weight:600;margin-bottom:24px}
+.hero h1{font-size:3.4em;font-weight:900;line-height:1.05;letter-spacing:-.04em;margin-bottom:20px}
+.hero h1 .accent{color:var(--accent)}
+.hero h1 .serif-em{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:400}
+.hero p{font-size:1.1em;color:var(--text-secondary);margin-bottom:36px;max-width:460px;margin-left:auto;margin-right:auto;line-height:1.65}
+.hero .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;font-weight:600;font-size:.95em;text-decoration:none;border-radius:12px;transition:all .15s;border:none;cursor:pointer;font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff !important}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border-strong)}
+.btn-ghost:hover{border-color:var(--text-secondary);background:var(--bg-elevated)}
+
+/* Chat preview */
+.chat-preview{margin:40px auto 0;max-width:400px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;overflow:hidden}
+.chat-msg{padding:14px 18px;display:flex;gap:10px;align-items:flex-start}
+.chat-msg+.chat-msg{border-top:1px solid var(--border)}
+.chat-msg .avatar{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.9em;font-weight:700;color:#fff}
+.chat-msg .avatar.user{background:var(--accent)}
+.chat-msg .avatar.trainer{background:var(--text-secondary)}
+.chat-msg .bubble{flex:1;font-size:.92em;line-height:1.55}
+.chat-msg .bubble strong{color:var(--text)}
+.chat-msg .bubble .muted{color:var(--text-tertiary);font-size:.85em}
+.chat-msg.user .bubble{text-align:right}
+
+/* Sections */
+.section{padding:60px 0}
+.section-title{font-size:1.9em;font-weight:800;letter-spacing:-.02em;margin-bottom:12px}
+.section-sub{color:var(--text-secondary);font-size:1.05em;margin-bottom:40px;max-width:480px}
+
+/* How it works */
+.how-grid{display:flex;flex-direction:column;gap:0}
+.how-step{display:flex;gap:20px;padding:28px 0;border-top:1px solid var(--border)}
+.how-step:last-child{border-bottom:1px solid var(--border)}
+.how-step .num{font-family:'Instrument Serif',Georgia,serif;font-size:2em;color:var(--accent);line-height:1;min-width:48px;flex-shrink:0}
+.how-step h3{font-size:1.15em;font-weight:700;margin-bottom:6px}
+.how-step p{color:var(--text-secondary);font-size:.95em;line-height:1.6}
+
+/* CTA */
+.cta-section{text-align:center;padding:80px 24px 60px}
+.cta-section h2{font-size:2.2em;font-weight:800;letter-spacing:-.02em;margin-bottom:12px}
+.cta-section p{color:var(--text-secondary);margin-bottom:24px;font-size:1.05em}
+
+/* Footer */
+footer{border-top:1px solid var(--border);padding:40px 24px}
+footer .inner{max-width:760px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:24px}
+footer .brand p{color:var(--text-tertiary);font-size:.88em;max-width:280px}
+footer .bottom{max-width:760px;margin:32px auto 0;padding-top:20px;border-top:1px solid var(--border);text-align:center;color:var(--text-tertiary);font-size:.85em}
+
+@media(max-width:640px){
+  .hero h1{font-size:2.4em}
+  .hero{padding:100px 20px 40px}
+  nav .links a{display:none}
+  .section-title{font-size:1.5em}
+  .chat-preview{max-width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="inner">
+    <a href="/" class="logo">LiftLog</a>
+    <div class="links">
+      <a href="#how">How it works</a>
+      <button class="icon-btn" onclick="toggleTheme()" id="themeBtn"></button>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h11v11h-11z"/><path d="M2 2h4.5v4.5H2z"/><path d="M17.5 2H22v4.5h-4.5z"/><path d="M2 17.5h4.5V22H2z"/><path d="M17.5 17.5H22V22h-4.5z"/></svg>
+    A personal trainer in your chat
+  </div>
+  <h1>Workout <span class="accent">smarter</span><br>and <span class="serif-em">harder.</span></h1>
+  <p>A personal trainer agent that lives in your chat. It builds your program, tracks your progress, and coaches you between sets. You just show up and lift.</p>
+  <div class="btns">
+    <a href="#how" class="btn btn-primary">How it works</a>
+    <a href="#get" class="btn btn-ghost">Get started</a>
+  </div>
+
+  <!-- Chat preview -->
+  <div class="chat-preview">
+    <div class="chat-msg user">
+      <div class="bubble"><strong>bench 225x8, 225x6, 225x5</strong><br><span class="muted">2 min ago</span></div>
+      <div class="avatar user">B</div>
+    </div>
+    <div class="chat-msg">
+      <div class="avatar trainer">💪</div>
+      <div class="bubble">Nice — that's 5lbs up from last week. Rep quality on set 2 looks like it dropped. Drop to <strong>205</strong> for 8, rest 90s.<br><span class="muted">Trainer · just now</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="container" id="how">
+  <div class="section">
+    <h2 class="section-title">How it works</h2>
+    <p class="section-sub">Not an app. Not a spreadsheet. A trainer you talk to in whatever chat you already use.</p>
+    <div class="how-grid">
+      <div class="how-step">
+        <div class="num">1</div>
+        <div>
+          <h3>Meet your trainer</h3>
+          <p>Not at the gym — just a casual conversation about you, your goals, and how hard you want to be pushed. The agent builds your program from that.</p>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="num">2</div>
+        <div>
+          <h3>Lift</h3>
+          <p>Log your sets, ask what's next, or just lift and review later. The agent adapts to how you want to use it — silent logging, step-by-step guidance, or anything between.</p>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="num">3</div>
+        <div>
+          <h3>Get better</h3>
+          <p>The agent tracks your progress, spots plateaus, adjusts your program, and coaches you between sets when you need it. You don't think about the plan — it does.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WHAT MAKES IT DIFFERENT -->
+<div class="container">
+  <div class="section">
+    <h2 class="section-title">What makes it different</h2>
+    <p class="section-sub">It's not a workout tracker. It's a trainer that knows you.</p>
+    <div class="how-grid">
+      <div class="how-step">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="min-width:48px;flex-shrink:0"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
+        <div>
+          <h3>It's an expert</h3>
+          <p>Knows form, technique, exercise selection, and how to program around lifts. It infers exercises from context and confirms when unsure. It doesn't need to be told what a bench press is.</p>
+        </div>
+      </div>
+      <div class="how-step">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="min-width:48px;flex-shrink:0"><path d="M16 7a4 4 0 1 1-8 0"/><path d="M12 3v0"/><path d="M8 11a4 4 0 1 0 8 0"/><path d="M3 21h18"/><path d="M12 11v10"/></svg>
+        <div>
+          <h3>Adapts to you</h3>
+          <p>How hard to push, how to handle a bad day, whether to proactively tell you the next set or stay quiet — all based on who you are, not a template. Some people want to be pushed, some want gentle. It learns which.</p>
+        </div>
+      </div>
+      <div class="how-step">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="min-width:48px;flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <div>
+          <h3>Lives in your chat</h3>
+          <p>Not a new app to download. It lives in whatever chat app you already use — Telegram, Discord, wherever your agent lives. You already have it open at the gym.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GET STARTED -->
+<div class="container" id="get">
+  <div class="section">
+    <h2 class="section-title">Get started</h2>
+    <p class="section-sub">LiftLog is in development. Want to be an early tester or get notified when it's ready?</p>
+    <div style="text-align:center;padding:20px 0">
+      <a href="#" class="btn btn-primary">Join the waitlist</a>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>Stop thinking.<br>Start lifting.</h2>
+  <p>Your trainer is already in your chat.</p>
+  <a href="#get" class="btn btn-primary">Get started</a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="inner">
+    <div class="brand">
+      <div style="font-weight:800;font-size:1.05em;margin-bottom:8px">LiftLog</div>
+      <p>A personal trainer agent that lives in your chat. Workout smarter and harder.</p>
+    </div>
+    <div style="display:flex;gap:40px">
+      <div class="col">
+        <h4 style="font-size:.82em;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;color:var(--text-tertiary)">Product</h4>
+        <a href="#how" style="display:block;color:var(--text-secondary);text-decoration:none;font-size:.92em;padding:3px 0">How it works</a>
+        <a href="#get" style="display:block;color:var(--text-secondary);text-decoration:none;font-size:.92em;padding:3px 0">Get started</a>
+      </div>
+    </div>
+  </div>
+  <div class="bottom">Workout smarter and harder.</div>
+</footer>
+
+<script>
+function getTheme(){return localStorage.getItem('liftlog-theme')||'dark'}
+function applyTheme(){var t=getTheme();document.documentElement.setAttribute('data-theme',t);var btn=document.getElementById('themeBtn');if(btn)btn.innerHTML=t==='dark'?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'}
+function toggleTheme(){var current=document.documentElement.getAttribute('data-theme')||'dark';var next=current==='dark'?'light':'dark';localStorage.setItem('liftlog-theme',next);applyTheme()}
+applyTheme();
+</script>
+
+</body>
+</html>
