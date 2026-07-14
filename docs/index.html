@@ -108,6 +108,18 @@ footer .bottom{max-width:760px;margin:32px auto 0;padding-top:20px;border-top:1p
   .section-title{font-size:1.5em}
   .chat-preview{max-width:100%}
 }
+
+/* Install cards */
+.install-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.install-row{padding:28px 32px}
+.install-row+.install-row{border-top:1px solid var(--border)}
+.install-badge{display:inline-block;padding:4px 12px;border-radius:100px;font-size:.78em;font-weight:600;margin-bottom:14px;background:var(--bg-elevated);color:var(--text-secondary)}
+.install-row h3{font-size:1.1em;font-weight:700;margin-bottom:8px}
+.install-row p{color:var(--text-secondary);font-size:.92em;margin-bottom:14px}
+.code-box{background:var(--code-bg);border:1px solid var(--code-border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px}
+.code-box code{font-family:'SF Mono','JetBrains Mono',monospace;font-size:.82em;color:var(--text);flex:1;word-break:break-all}
+.copy-btn{background:none;border:1px solid var(--border-strong);color:var(--text);padding:5px 12px;border-radius:6px;font-size:.8em;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -132,8 +144,8 @@ footer .bottom{max-width:760px;margin:32px auto 0;padding-top:20px;border-top:1p
   <h1>Workout <span class="accent">smarter</span><br>and <span class="serif-em">harder.</span></h1>
   <p>A personal trainer agent that lives in your chat. It builds your program, tracks your progress, and coaches you between sets. You just show up and lift.</p>
   <div class="btns">
-    <a href="#how" class="btn btn-primary">How it works</a>
-    <a href="#get" class="btn btn-ghost">Get started</a>
+    <a href="#get" class="btn btn-primary">Get the skill</a>
+    <a href="#how" class="btn btn-ghost">How it works</a>
   </div>
 
   <!-- Chat preview -->
@@ -215,9 +227,27 @@ footer .bottom{max-width:760px;margin:32px auto 0;padding-top:20px;border-top:1p
 <div class="container" id="get">
   <div class="section">
     <h2 class="section-title">Get started</h2>
-    <p class="section-sub">LiftLog is in development. Want to be an early tester or get notified when it's ready?</p>
-    <div style="text-align:center;padding:20px 0">
-      <a href="#" class="btn btn-primary">Join the waitlist</a>
+    <p class="section-sub">Two ways in. Whatever you're already using.</p>
+    <div class="install-card">
+      <div class="install-row">
+        <span class="install-badge">FOR AGENT USERS</span>
+        <h3>Install the skill</h3>
+        <p>If you use an agent with skill support (Hermes, Claude Code, Cursor, Codex, OpenCode):</p>
+        <div class="code-box">
+          <code>npx skills add buckZz7/liftlog</code>
+          <button class="copy-btn" onclick="navigator.clipboard.writeText('npx skills add buckZz7/liftlog');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',2000)">Copy</button>
+        </div>
+      </div>
+      <div class="install-row">
+        <span class="install-badge">FOR CHATGPT / CLAUDE / ANY LLM</span>
+        <h3>Copy the prompt</h3>
+        <p>No skill support? Paste this into any LLM:</p>
+        <div class="code-box">
+          <code style="font-size:.68em;white-space:pre-wrap;line-height:1.5">You are LiftLog, a personal trainer. When I message you, act as my trainer — get to know me, my goals, and how hard I want to be pushed. Build my workout program, track my progress (log sets as "exercise weightxreps"), and coach me between sets when I need it. Be an expert in form and technique. Adapt to how I want to use it — silent logging, step-by-step guidance, or anything between. Don't coach rep-by-rep. Remember everything between sessions.</code>
+          <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('lp').textContent);this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',2000)">Copy</button>
+        </div>
+        <span id="lp" style="display:none">You are LiftLog, a personal trainer. When I message you, act as my trainer — get to know me, my goals, and how hard I want to be pushed. Build my workout program, track my progress (log sets as "exercise weightxreps"), and coach me between sets when I need it. Be an expert in form and technique. Adapt to how I want to use it — silent logging, step-by-step guidance, or anything between. Don't coach rep-by-rep. Remember everything between sessions.</span>
+      </div>
     </div>
   </div>
 </div>
