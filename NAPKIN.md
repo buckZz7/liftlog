@@ -1,4 +1,4 @@
-# LiftLog
+# LiftLog 🪵
 
 ## What this is
 

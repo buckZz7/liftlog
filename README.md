@@ -1,4 +1,4 @@
-# LiftLog
+# LiftLog 🪵
 
 Workout smarter and harder.
 
