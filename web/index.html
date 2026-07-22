@@ -117,6 +117,24 @@
     border-top: 1px solid var(--line); font-variant-numeric: tabular-nums;
   }
 
+  .checkitem {
+    display: flex; align-items: center; gap: 12px; padding: 11px 4px;
+    border-bottom: 1px solid var(--line); cursor: pointer; user-select: none;
+  }
+  .checkitem:last-of-type { border-bottom: none; }
+  .checkitem .box {
+    width: 22px; height: 22px; flex: none; border-radius: 7px;
+    border: 1.5px solid var(--dim); display: grid; place-items: center;
+    font-size: 13px; color: transparent; transition: all .15s;
+  }
+  .checkitem.done .box { background: var(--good); border-color: var(--good); color: #06120c; }
+  .checkitem.done .lbl { color: var(--dim); text-decoration: line-through; }
+  .checkitem .lbl { font-size: 14.5px; font-weight: 500; }
+  .sectiontitle {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--dim); margin: 22px 2px 10px;
+  }
+
   #footer {
     position: fixed; bottom: 0; left: 0; right: 0; margin: 0 auto; max-width: 520px;
     padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
@@ -148,9 +166,7 @@
 </header>
 <div id="app" class="loading">Loading today's workout…</div>
 <div id="footer">
-  <button class="btn" onclick="addOther('cardio')">+ Cardio</button>
-  <button class="btn" onclick="addOther('mobility')">+ Mobility</button>
-  <button class="btn" onclick="reload()">↻</button>
+  <button class="btn" onclick="reload()">↻ Refresh</button>
 </div>
 <div id="toast"></div>
 
@@ -186,6 +202,42 @@ function render() {
   DATA.exercises.forEach((ex, i) => {
     for (let s = 0; s < ex.sets; s++) addSet(i);
   });
+  renderChecklist();
+}
+
+function renderChecklist() {
+  const app = document.getElementById('app');
+  let html = '';
+  if (DATA.cardio && DATA.cardio.length) {
+    html += `<div class="sectiontitle">Cardio</div><div class="ex">` +
+      DATA.cardio.map((c, i) =>
+        `<div class="checkitem" data-kind="cardio" data-item="${esc(c)}" onclick="toggleCheck(this)">
+           <span class="box">✓</span><span class="lbl">${esc(c)}</span></div>`).join('') +
+      `<button class="btn save" onclick="logChecklist('cardio', this)">Log cardio</button></div>`;
+  }
+  if (DATA.mobility && DATA.mobility.length) {
+    html += `<div class="sectiontitle">Flexibility flow · 10 min</div><div class="ex">` +
+      DATA.mobility.map((c, i) =>
+        `<div class="checkitem" data-kind="mobility" data-item="${esc(c)}" onclick="toggleCheck(this)">
+           <span class="box">✓</span><span class="lbl">${esc(c)}</span></div>`).join('') +
+      `<button class="btn save" onclick="logChecklist('mobility', this)">Log flexibility</button></div>`;
+  }
+  app.insertAdjacentHTML('beforeend', html);
+}
+
+function toggleCheck(el) { el.classList.toggle('done'); }
+
+async function logChecklist(kind, btn) {
+  const items = [...document.querySelectorAll(`.checkitem[data-kind="${kind}"].done`)]
+    .map(el => el.dataset.item);
+  if (!items.length) { toast('Check items off first'); return; }
+  if (kind === 'mobility') {
+    await post({type: 'mobility', day: DATA.day.name, items});
+  } else {
+    await post({type: 'cardio', day: DATA.day.name, kind: DATA.day.name, detail: items.join('; ')});
+  }
+  btn.textContent = 'Logged ✓'; btn.classList.add('done');
+  toast(kind === 'mobility' ? 'Flexibility logged' : 'Cardio logged');
 }
 
 function addSet(i) {
@@ -225,23 +277,6 @@ async function saveEx(i, btn) {
     toast(`${ex.name} logged`);
     setTimeout(reload, 900);
   } else toast('Error saving');
-}
-
-async function addOther(kind) {
-  if (kind === 'cardio') {
-    const k = prompt('Cardio type (walk / stairs / sprints):', 'incline walk');
-    if (!k) return;
-    const mins = prompt('Minutes:');
-    if (!mins) return;
-    const detail = prompt('Detail (incline, speed, etc):', '') || '';
-    await post({type: 'cardio', day: DATA.day.name, kind: k, duration_min: parseInt(mins), detail});
-  } else {
-    const items = prompt('Mobility done (comma separated):', 'flexibility flow');
-    if (!items) return;
-    await post({type: 'mobility', day: DATA.day.name, items: items.split(',').map(s => s.trim())});
-  }
-  toast('Logged');
-  reload();
 }
 
 async function post(obj) {

@@ -43,21 +43,32 @@ def append_event(ev):
 
 
 def parse_program():
-    """Parse program.md into days: [{num, name, exercises:[{name, sets, lo, hi, note}]}]."""
+    """Parse program.md into days: [{num, name, exercises, mobility, cardio}]."""
     days = []
     day = None
+    section = None  # None | "mobility" | "cardio"
     for line in PROGRAM.read_text().splitlines():
         m = re.match(r"## Day (\d+)\s*[—-]\s*(.+)", line)
         if m:
-            day = {"num": int(m.group(1)), "name": m.group(2).strip(), "exercises": []}
+            day = {"num": int(m.group(1)), "name": m.group(2).strip(),
+                   "exercises": [], "mobility": [], "cardio": []}
             days.append(day)
+            section = None
             continue
         if day is None:
             continue
+        if re.match(r"flexibility flow|mobility", line, re.I):
+            section = "mobility"
+            continue
+        if re.match(r"^#{2,4}\s*.*cardio|^#{2,4}\s*Option", line, re.I):
+            section = "cardio"
+            continue
+        if line.startswith("##"):
+            section = None
+            continue
         m = re.match(r"-\s+(.+?):\s*(\d+)\s*x\s*(\d+)(?:-(\d+))?(.*)", line)
-        if m:
+        if m and section is None:
             name = m.group(1).strip()
-            # skip non-lift lines that match loosely
             if re.search(r"(stretch|pose|fold|walk|warmup|cooldown|sprint|rest|min\b)", name, re.I) and not re.search(r"(press|row|curl|raise|fly|pulldown|pushdown|squat|press|crunch|swing|kickback|rdl)", name, re.I):
                 continue
             day["exercises"].append({
@@ -67,6 +78,11 @@ def parse_program():
                 "hi": int(m.group(4) or m.group(3)),
                 "note": (m.group(5) or "").strip(" ()—-"),
             })
+            continue
+        if section == "mobility" and line.startswith("- "):
+            day["mobility"].append(line[2:].strip())
+        elif section == "cardio" and line.startswith("- "):
+            day["cardio"].append(line[2:].strip())
     return days
 
 
@@ -123,8 +139,8 @@ def today_payload():
                 last_num = int(m.group(1))
             break
     nxt = None
-    for d in lift_days:
-        if d["num"] > last_num:
+    for d in days:
+        if d["num"] > last_num and (d["exercises"] or d["cardio"]):
             nxt = d
             break
     if nxt is None and lift_days:
@@ -138,11 +154,20 @@ def today_payload():
         exercises.append({**ex, "target_weight": weight, "hint": hint,
                           "prev": [{"weight": s["weight"], "reps": s["reps"]} for s in (prev_sets or [])]})
 
+    # cardio prescription: from a cardio-only day, else generic from "How cardio fits" is omitted
+    cardio = []
+    mobility = []
+    if nxt:
+        mobility = nxt.get("mobility", [])
+        cardio = nxt.get("cardio", [])
+
     logged_today = [e for e in events if e.get("date") == date.today().isoformat()]
     return {
         "date": date.today().isoformat(),
         "day": nxt,
         "exercises": exercises,
+        "mobility": mobility,
+        "cardio": cardio,
         "logged_today": logged_today,
     }
 
