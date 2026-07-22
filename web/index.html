@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LiftLog 🪵</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #1a1d24; --card2: #22262f; --line: #2c313c;
+    --text: #e8eaf0; --dim: #9aa1ad; --accent: #f2b544; --good: #4cc38a; --fail: #e5534b;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 16px/1.45 -apple-system, system-ui, sans-serif;
+         padding: 12px 12px 90px; max-width: 560px; margin: 0 auto; }
+  header { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 2px 14px; }
+  h1 { font-size: 20px; } h1 .log { color: var(--accent); }
+  #date { color: var(--dim); font-size: 13px; }
+  .dayname { color: var(--dim); margin-bottom: 14px; font-size: 14px; }
+  .ex { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .ex h2 { font-size: 16px; margin-bottom: 2px; }
+  .target { font-size: 13px; color: var(--accent); margin-bottom: 2px; }
+  .hint { font-size: 12px; color: var(--dim); margin-bottom: 10px; }
+  .setrow { display: grid; grid-template-columns: 26px 1fr 1fr 40px; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .setrow .n { color: var(--dim); font-size: 13px; text-align: center; }
+  input { width: 100%; background: var(--card2); border: 1px solid var(--line); color: var(--text);
+          border-radius: 10px; padding: 12px 10px; font-size: 17px; text-align: center;
+          -webkit-appearance: none; appearance: none; }
+  input:focus { outline: none; border-color: var(--accent); }
+  .ftoggle { background: var(--card2); border: 1px solid var(--line); color: var(--dim); border-radius: 10px;
+             font-size: 13px; padding: 12px 0; text-align: center; cursor: pointer; user-select: none; }
+  .ftoggle.on { background: var(--fail); border-color: var(--fail); color: #fff; font-weight: 700; }
+  .btn { display: block; width: 100%; border: none; border-radius: 12px; padding: 13px; font-size: 16px;
+         font-weight: 600; cursor: pointer; }
+  .save { background: var(--accent); color: #141414; margin-top: 6px; }
+  .save.done { background: var(--good); color: #0c1512; }
+  .more { background: none; border: none; color: var(--dim); font-size: 14px; padding: 10px 0; cursor: pointer; }
+  .prev { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  #footer { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg); border-top: 1px solid var(--line);
+            padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto;
+            display: flex; gap: 10px; }
+  #footer .btn { background: var(--card2); color: var(--text); border: 1px solid var(--line); font-size: 14px; padding: 11px; }
+  #toast { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); background: var(--good);
+           color: #0c1512; font-weight: 600; padding: 10px 18px; border-radius: 999px; font-size: 14px;
+           opacity: 0; transition: opacity .25s; pointer-events: none; }
+  .loading { color: var(--dim); text-align: center; padding: 60px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Lift<span class="log">Log</span> 🪵</h1>
+  <span id="date"></span>
+</header>
+<div id="app" class="loading">Loading today's workout…</div>
+<div id="footer">
+  <button class="btn" onclick="addOther('cardio')">+ Cardio</button>
+  <button class="btn" onclick="addOther('mobility')">+ Mobility</button>
+  <button class="btn" onclick="reload()">↻ Refresh</button>
+</div>
+<div id="toast"></div>
+
+<script>
+let DATA = null;
+
+async function reload() {
+  document.getElementById('app').innerHTML = '<div class="loading">Loading…</div>';
+  DATA = await (await fetch('/api/today')).json();
+  render();
+}
+
+function render() {
+  document.getElementById('date').textContent = DATA.date;
+  const app = document.getElementById('app');
+  if (!DATA.day) { app.innerHTML = '<div class="loading">No program day found.</div>'; return; }
+  let html = `<div class="dayname">Today: <b>${esc(DATA.day.name)}</b></div>`;
+  DATA.exercises.forEach((ex, i) => {
+    const w = ex.target_weight != null ? ex.target_weight : '';
+    html += `<div class="ex" id="ex${i}">
+      <h2>${esc(ex.name)}</h2>
+      <div class="target">Target: ${ex.sets} × ${ex.lo}${ex.hi !== ex.lo ? '–' + ex.hi : ''}${w !== '' ? ' @ ' + w + ' lb' : ''}</div>
+      ${ex.hint ? `<div class="hint">${esc(ex.hint)}</div>` : ''}
+      <div class="sets" data-ex="${i}"></div>
+      <button class="more" onclick="addSet(${i})">+ add set</button>
+      <button class="btn save" onclick="saveEx(${i}, this)">Log ${esc(ex.name)}</button>
+      ${ex.prev && ex.prev.length ? `<div class="prev">Last: ${ex.prev.map(p => `${p.weight}×${p.reps}`).join(', ')}</div>` : ''}
+    </div>`;
+  });
+  app.innerHTML = html;
+  DATA.exercises.forEach((ex, i) => {
+    for (let s = 0; s < ex.sets; s++) addSet(i);
+  });
+}
+
+function addSet(i) {
+  const ex = DATA.exercises[i];
+  const box = document.querySelector(`.sets[data-ex="${i}"]`);
+  const n = box.children.length + 1;
+  const w = ex.target_weight != null ? ex.target_weight : '';
+  const row = document.createElement('div');
+  row.className = 'setrow';
+  row.innerHTML = `<span class="n">${n}</span>
+    <input inputmode="decimal" placeholder="lbs" value="${w}">
+    <input inputmode="numeric" placeholder="reps">
+    <span class="ftoggle" title="to failure" onclick="this.classList.toggle('on')">fail</span>`;
+  box.appendChild(row);
+  if (n > 1) row.children[2].focus();
+}
+
+async function saveEx(i, btn) {
+  const ex = DATA.exercises[i];
+  const rows = [...document.querySelectorAll(`.sets[data-ex="${i}"] .setrow`)];
+  const sets = rows.map(r => ({
+    weight: parseFloat(r.children[1].value) || 0,
+    reps: parseInt(r.children[2].value) || 0,
+    failure: r.children[3].classList.contains('on'),
+  })).filter(s => s.reps > 0);
+  if (!sets.length) { toast('Nothing to log'); return; }
+  const res = await fetch('/api/log', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({type: 'sets', day: DATA.day.name, exercise: ex.name, sets}),
+  });
+  const out = await res.json();
+  if (out.ok) {
+    btn.textContent = `Logged ${out.added} set${out.added > 1 ? 's' : ''} ✓`;
+    btn.classList.add('done');
+    toast(`${ex.name} logged`);
+    setTimeout(reload, 900);
+  } else toast('Error saving');
+}
+
+async function addOther(kind) {
+  if (kind === 'cardio') {
+    const k = prompt('Cardio type (walk / stairs / sprints):', 'incline walk');
+    if (!k) return;
+    const mins = prompt('Minutes:');
+    if (!mins) return;
+    const detail = prompt('Detail (incline, speed, etc):', '') || '';
+    await post({type: 'cardio', day: DATA.day.name, kind: k, duration_min: parseInt(mins), detail});
+  } else {
+    const items = prompt('Mobility done (comma separated):', 'flexibility flow');
+    if (!items) return;
+    await post({type: 'mobility', day: DATA.day.name, items: items.split(',').map(s => s.trim())});
+  }
+  toast('Logged');
+  reload();
+}
+
+async function post(obj) {
+  await fetch('/api/log', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(obj)});
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.opacity = 1;
+  setTimeout(() => t.style.opacity = 0, 1500);
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+reload();
+</script>
+</body>
+</html>
