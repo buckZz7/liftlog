@@ -149,6 +149,41 @@
   }
   #toast.show { opacity: 1; }
 
+  #sheet {
+    position: fixed; inset: 0; z-index: 20; display: none;
+    background: rgba(0,0,0,.55);
+  }
+  #sheet.open { display: block; }
+  #sheet .panel {
+    position: absolute; bottom: 0; left: 0; right: 0; margin: 0 auto; max-width: 520px;
+    background: var(--bg); border-top: 1px solid var(--line-hi);
+    padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  #sheet .ptitle { font-size: 11px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--dim); margin-bottom: 10px; text-align: center; }
+  .wheels { display: flex; gap: 10px; }
+  .wheel { flex: 1; position: relative; }
+  .wheel .wl { font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--dim); text-align: center; margin-bottom: 6px; }
+  .scroll {
+    height: 180px; overflow-y: scroll; scroll-snap-type: y mandatory;
+    border: 1px solid var(--line); border-radius: 2px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .scroll::-webkit-scrollbar { display: none; }
+  .scroll .opt {
+    height: 36px; display: grid; place-items: center; scroll-snap-align: center;
+    font-size: 16px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums;
+  }
+  .scroll .opt.sel { color: var(--text); }
+  .wheel .marker {
+    position: absolute; left: 0; right: 0; top: 50%; height: 36px; margin-top: 9px;
+    transform: translateY(-50%); border-top: 1px solid var(--line-hi);
+    border-bottom: 1px solid var(--line-hi); pointer-events: none;
+  }
+  .pad { height: 72px; }
+  #sheet .btn { margin-top: 14px; }
+
   .loading { color: var(--dim); text-align: center; padding: 80px 0; font-size: 12px;
     letter-spacing: .12em; text-transform: uppercase; }
 </style>
@@ -164,6 +199,16 @@
   <button class="btn" onclick="toggleTheme()" id="themebtn">◐ Light</button>
 </div>
 <div id="toast"></div>
+<div id="sheet" onclick="if(event.target===this)closeSheet()">
+  <div class="panel">
+    <div class="ptitle" id="sheettitle">SET 01</div>
+    <div class="wheels">
+      <div class="wheel"><div class="wl">lbs</div><div class="scroll" id="ww"></div><div class="marker"></div></div>
+      <div class="wheel"><div class="wl">reps</div><div class="scroll" id="wr"></div><div class="marker"></div></div>
+    </div>
+    <button class="btn save" onclick="closeSheet(true)">Done</button>
+  </div>
+</div>
 
 <script>
 let DATA = null;
@@ -243,8 +288,8 @@ function addSet(i) {
   const row = document.createElement('div');
   row.className = 'setrow';
   row.innerHTML = `<span class="n">${String(n).padStart(2, '0')}</span>
-    <input inputmode="decimal" placeholder="lbs" value="${w}">
-    <input inputmode="numeric" placeholder="reps">
+    <input readonly placeholder="lbs" value="${w}" onclick="openSheet(this,'w')">
+    <input readonly placeholder="reps" onclick="openSheet(this,'r')">
     <span class="ftoggle" title="to failure" onclick="this.classList.toggle('on')">fail</span>`;
   box.appendChild(row);
   if (n > 1) row.children[2].focus();
@@ -294,6 +339,63 @@ if (localStorage.getItem('ll-theme') === 'light') {
   document.addEventListener('DOMContentLoaded', () =>
     document.getElementById('themebtn').textContent = '◑ Dark');
 }
+/* ---- wheel picker ---- */
+let SHEET = null; // {el, kind}
+const W_VALS = [];
+for (let v = 0; v <= 500; v += 2.5) W_VALS.push(v % 1 ? String(v) : String(v));
+const R_VALS = []; for (let v = 0; v <= 50; v++) R_VALS.push(String(v));
+
+function buildWheel(el, vals) {
+  el.innerHTML = '<div class="pad"></div>' +
+    vals.map(v => `<div class="opt" data-v="${v}">${v}</div>`).join('') +
+    '<div class="pad"></div>';
+  el.addEventListener('scroll', () => {
+    clearTimeout(el._t);
+    el._t = setTimeout(() => snapWheel(el), 80);
+  });
+}
+function snapWheel(el) {
+  const i = Math.round(el.scrollTop / 36);
+  el.scrollTo({top: i * 36, behavior: 'smooth'});
+  markSel(el);
+}
+function markSel(el) {
+  const i = Math.round(el.scrollTop / 36);
+  el.querySelectorAll('.opt').forEach((o, j) => o.classList.toggle('sel', j === i));
+}
+function wheelVal(el) {
+  const o = el.querySelectorAll('.opt')[Math.round(el.scrollTop / 36)];
+  return o ? o.dataset.v : '';
+}
+function setWheel(el, val) {
+  const opts = [...el.querySelectorAll('.opt')];
+  let i = opts.findIndex(o => o.dataset.v === String(val));
+  if (i < 0) { // nearest
+    let best = 1e9;
+    opts.forEach((o, j) => { const d = Math.abs(parseFloat(o.dataset.v) - parseFloat(val || 0)); if (d < best) { best = d; i = j; } });
+  }
+  el.scrollTop = i * 36; markSel(el);
+}
+function openSheet(input, kind) {
+  const row = input.closest('.setrow');
+  SHEET = {w: row.children[1], r: row.children[2]};
+  document.getElementById('sheettitle').textContent =
+    'SET ' + row.querySelector('.n').textContent;
+  const ww = document.getElementById('ww'), wr = document.getElementById('wr');
+  if (!ww.children.length) { buildWheel(ww, W_VALS); buildWheel(wr, R_VALS); }
+  setWheel(ww, SHEET.w.value || 0);
+  setWheel(wr, SHEET.r.value || 0);
+  document.getElementById('sheet').classList.add('open');
+}
+function closeSheet(commit) {
+  if (commit && SHEET) {
+    SHEET.w.value = wheelVal(document.getElementById('ww'));
+    SHEET.r.value = wheelVal(document.getElementById('wr'));
+  }
+  document.getElementById('sheet').classList.remove('open');
+  SHEET = null;
+}
+
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 reload();
