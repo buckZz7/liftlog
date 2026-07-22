@@ -13,10 +13,10 @@
     --text: #e8e8e8;
     --dim: #6b6b6b;
     --faint: #404040;
-    --accent: #d4a017;        /* amber */
-    --olive: #8a9a5b;         /* olive drab */
-    --good: #8a9a5b;
-    --fail: #b0443c;
+    --accent: #ffffff;
+    --olive: #8a8a8a;
+    --good: #ffffff;
+    --fail: #ffffff;
   }
   * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
   html { color-scheme: dark; }
@@ -42,7 +42,7 @@
     display: flex; align-items: center; gap: 10px;
   }
   .dayname b { color: var(--accent); font-weight: 700; }
-  .dayname::before { content: "▸"; color: var(--olive); }
+  .dayname::before { content: "▸"; color: var(--dim); }
 
   .ex {
     border: 1px solid var(--line); border-radius: 2px;
@@ -51,7 +51,7 @@
   }
   .ex::before {
     content: ""; position: absolute; top: 0; left: 0; width: 3px; height: 100%;
-    background: var(--olive); opacity: .55;
+    background: #fff; opacity: .25;
   }
   .ex h2 {
     font-size: 13.5px; font-weight: 700; letter-spacing: .08em;
@@ -89,7 +89,7 @@
     letter-spacing: .1em; padding: 14px 0; text-align: center; cursor: pointer;
     user-select: none; transition: all .12s;
   }
-  .ftoggle.on { border-color: var(--fail); color: var(--fail); }
+  .ftoggle.on { background: #fff; border-color: #fff; color: #000; }
 
   .btn {
     display: block; width: 100%; border: none; border-radius: 2px; padding: 14px;
@@ -98,7 +98,7 @@
   }
   .btn:active { opacity: .75; }
   .save { background: var(--accent); color: #000; margin-top: 12px; }
-  .save.done { background: var(--good); color: #000; }
+  .save.done { background: #8a8a8a; color: #000; }
   .more {
     background: none; border: none; color: var(--dim);
     font: 700 11px/1 inherit; letter-spacing: .1em; text-transform: uppercase;
@@ -120,12 +120,12 @@
     border: 1px solid var(--dim); display: grid; place-items: center;
     font-size: 11px; color: transparent; transition: all .12s;
   }
-  .checkitem.done .box { background: var(--good); border-color: var(--good); color: #000; }
+  .checkitem.done .box { background: #fff; border-color: #fff; color: #000; }
   .checkitem.done .lbl { color: var(--dim); text-decoration: line-through; }
   .checkitem .lbl { font-size: 13px; }
   .sectiontitle {
     font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .16em;
-    color: var(--olive); margin: 26px 0 10px;
+    color: var(--dim); margin: 26px 0 10px;
   }
   .sectiontitle::before { content: "▸ "; }
 
@@ -140,7 +140,7 @@
 
   #toast {
     position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
-    background: var(--good); color: #000; font: 700 11px/1 inherit;
+    background: #fff; color: #000; font: 700 11px/1 inherit;
     letter-spacing: .12em; text-transform: uppercase;
     padding: 12px 20px; border-radius: 2px; z-index: 10;
     opacity: 0; transition: opacity .2s; pointer-events: none;
